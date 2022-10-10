@@ -1,12 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const fs = require('fs');
-
-const data = fs.readFileSync('./talker.json');
-const talker = JSON.parse(data);
+const fs = require('fs').promises;
+const path = require('path');
 
 const app = express();
 app.use(bodyParser.json());
+app.use(express.json());
 
 const HTTP_OK_STATUS = 200;
 const PORT = '3000';
@@ -20,10 +19,14 @@ app.listen(PORT, () => {
   console.log('Online');
 });
 
-app.get('/talker', (req, res) => {
-  try {
-    res.status(HTTP_OK_STATUS).send(talker);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
+const personTalkers = async () => {
+  const pathData = path.resolve(__dirname, 'talker.json');
+  const data = await fs.readFile(pathData, 'utf-8');
+  const talker = JSON.parse(data);
+  return talker;
+};
+
+app.get('/talker', async (_request, response) => {
+  const talkers = await personTalkers();
+  response.status(HTTP_OK_STATUS).json(talkers);
 });
