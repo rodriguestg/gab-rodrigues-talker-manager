@@ -40,3 +40,16 @@ app.get('/talker/:id', async (req, res) => {
   if (!talker) { return res.status(HTTP_BAD_STATUS).json(err); }
   res.status(HTTP_OK_STATUS).json(talker);
 });
+
+// const { email, password } = req.body;
+
+const MIN = 1000000000000000;
+const MAX = 9999999999999999;
+const randomToken = (min, max) => Math.floor(Math.random() * (max - min) + min);
+
+app.post('/login', (_req, res) => {
+  const numberToken = randomToken(MIN, MAX);
+  const token = { token: `${numberToken}` };
+  console.log(token);
+  res.status(HTTP_OK_STATUS).json(token);
+});
