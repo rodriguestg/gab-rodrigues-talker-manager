@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs').promises;
 const path = require('path');
 
+const pathData = path.resolve(__dirname, 'talker.json');
 const app = express();
 app.use(bodyParser.json());
 app.use(express.json());
@@ -24,7 +25,6 @@ app.listen(PORT, () => {
 });
 
 const personTalkers = async () => {
-  const pathData = path.resolve(__dirname, 'talker.json');
   const data = await fs.readFile(pathData, 'utf-8');
   const talker = JSON.parse(data);
   return talker;
@@ -43,8 +43,6 @@ app.get('/talker/:id', async (req, res) => {
   if (!talker) { return res.status(HTTP_BAD_STATUS).json(err); }
   res.status(HTTP_OK_STATUS).json(talker);
 });
-
-// const { email, password } = req.body;
 
 const errs = {
   err1: 'O campo "email" é obrigatório',
@@ -76,7 +74,7 @@ const randomToken = (min, max) => Math.floor(Math.random() * (max - min) + min);
 app.post('/login', validationEmail, validationPassword, (_req, res) => {
   const numberToken = randomToken(MIN, MAX);
   const token = { token: `${numberToken}` };
-  res.status(HTTP_OK_STATUS).json(token);
+  res.status(HTTP_OK_STATUS).send(token);
 });
 
 const postErrsTalker = {
@@ -159,12 +157,10 @@ const validationDate = (date) => {
 
 const validationWatchedAt = (req, res, next) => {
   const { watchedAt } = req.body.talk;
-  // console.log(watchedAt);
   if (!watchedAt) { 
     return res.status(HTTP_BAD400_STATUS).json({ message: postErrsTalker.err8 });
   }
   const validDate = validationDate(watchedAt);
-  // console.log(validDate);
   if (!validDate) {
     return res.status(HTTP_BAD400_STATUS).json({ message: postErrsTalker.err9 });
   }
@@ -173,7 +169,7 @@ const validationWatchedAt = (req, res, next) => {
 
 const validationRate = (req, res, next) => {
   const { rate } = req.body.talk;
-  if (!rate) { 
+  if (rate === undefined) { 
     return res.status(HTTP_BAD400_STATUS).json({ message: postErrsTalker.err10 });
   }
   if (Number(rate) < 1 || Number(rate) > 5) {
@@ -184,10 +180,17 @@ const validationRate = (req, res, next) => {
 
 app.post('/talker', validationToken, validationName, validationAge,
   validationTalk, validationRate, validationWatchedAt, async (req, res) => {
-    // const pathData = path.resolve(__dirname, 'talker.json');
-    const newTalker = { id: 1, ...req.body };
-    console.log(await newTalker);
-    console.log(req.body);
-    // pathData.push(await newTalker);
+    const newTalker = { id: 5, ...req.body };
+    await fs.writeFile(pathData, JSON.stringify([newTalker]));
     res.status(HTTP_CREATED_STATUS).json(await newTalker);
+});
+
+app.put('/talker/:id', validationToken, validationName, validationAge,
+  validationTalk, validationRate, validationWatchedAt, async (req, res) => {
+    const { id } = req.params;
+    const talkers = await personTalkers();
+    const talkersFilter = talkers.filter((person) => person.id !== Number(id));
+    const talkerEdit = { ...talkersFilter, id: Number(id), ...req.body };
+    await fs.writeFile(pathData, JSON.stringify([talkerEdit]));
+    res.status(HTTP_OK_STATUS).json(talkerEdit);
 });
