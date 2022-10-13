@@ -16,6 +16,27 @@ const HTTP_BAD401_STATUS = 401;
 const HTTP_DELETE_STATUS = 204;
 const PORT = '3000';
 
+const postErrsTalker = {
+  err1: 'Token não encontrado',
+  err2: 'Token inválido',
+  err3: 'O campo "name" é obrigatório',
+  err4: 'O "name" deve ter pelo menos 3 caracteres',
+  err5: 'O campo "age" é obrigatório',
+  err6: 'A pessoa palestrante deve ser maior de idade',
+  err7: 'O campo "talk" é obrigatório',
+  err8: 'O campo "watchedAt" é obrigatório',
+  err9: 'O campo "watchedAt" deve ter o formato "dd/mm/aaaa"',
+  err10: 'O campo "rate" é obrigatório',
+  err11: 'O campo "rate" deve ser um inteiro de 1 à 5',
+};
+
+const errs = {
+  err1: 'O campo "email" é obrigatório',
+  err2: 'O "email" deve ter o formato "email@email.com"',
+  err3: 'O campo "password" é obrigatório',
+  err4: 'O "password" deve ter pelo menos 6 caracteres',
+};
+
 // não remova esse endpoint, e para o avaliador funcionar
 app.get('/', (_request, response) => {
   response.status(HTTP_OK_STATUS).send();
@@ -24,6 +45,17 @@ app.get('/', (_request, response) => {
 app.listen(PORT, () => {
   console.log('Online');
 });
+
+const validationToken = (req, res, next) => {
+  const { authorization } = req.headers;
+  if (!authorization) { 
+    return res.status(HTTP_BAD401_STATUS).json({ message: postErrsTalker.err1 });
+  }
+  if (authorization.length < 16 || authorization.length > 16) {
+    return res.status(HTTP_BAD401_STATUS).json({ message: postErrsTalker.err2 });
+  }
+  next();
+};
 
 const personTalkers = async () => {
   const data = await fs.readFile(pathData, 'utf-8');
@@ -36,6 +68,15 @@ app.get('/talker', async (_req, res) => {
   res.status(HTTP_OK_STATUS).json(talkers);
 });
 
+app.get('/talker/search', validationToken, async (req, res) => {
+  const { q: searchTerm } = req.query;
+  const talkers = await personTalkers();
+  const talkersFilter = talkers.filter((person) => person.name.includes(searchTerm));
+  const talkerEdit = [...talkersFilter];
+  await fs.writeFile(pathData, JSON.stringify(talkerEdit));
+  res.status(HTTP_OK_STATUS).json(talkerEdit);
+});
+
 app.get('/talker/:id', async (req, res) => {
   const talkers = await personTalkers();
   const { id } = req.params;
@@ -44,13 +85,6 @@ app.get('/talker/:id', async (req, res) => {
   if (!talker) { return res.status(HTTP_BAD_STATUS).json(err); }
   res.status(HTTP_OK_STATUS).json(talker);
 });
-
-const errs = {
-  err1: 'O campo "email" é obrigatório',
-  err2: 'O "email" deve ter o formato "email@email.com"',
-  err3: 'O campo "password" é obrigatório',
-  err4: 'O "password" deve ter pelo menos 6 caracteres',
-};
 
 const validationEmail = (req, res, next) => {
   const { email } = req.body;
@@ -77,31 +111,6 @@ app.post('/login', validationEmail, validationPassword, (_req, res) => {
   const token = { token: `${numberToken}` };
   res.status(HTTP_OK_STATUS).send(token);
 });
-
-const postErrsTalker = {
-  err1: 'Token não encontrado',
-  err2: 'Token inválido',
-  err3: 'O campo "name" é obrigatório',
-  err4: 'O "name" deve ter pelo menos 3 caracteres',
-  err5: 'O campo "age" é obrigatório',
-  err6: 'A pessoa palestrante deve ser maior de idade',
-  err7: 'O campo "talk" é obrigatório',
-  err8: 'O campo "watchedAt" é obrigatório',
-  err9: 'O campo "watchedAt" deve ter o formato "dd/mm/aaaa"',
-  err10: 'O campo "rate" é obrigatório',
-  err11: 'O campo "rate" deve ser um inteiro de 1 à 5',
-};
-
-const validationToken = (req, res, next) => {
-  const { authorization } = req.headers;
-  if (!authorization) { 
-    return res.status(HTTP_BAD401_STATUS).json({ message: postErrsTalker.err1 });
-  }
-  if (authorization.length < 16 || authorization.length > 16) {
-    return res.status(HTTP_BAD401_STATUS).json({ message: postErrsTalker.err2 });
-  }
-  next();
-};
 
 const validationName = (req, res, next) => {
   const { name } = req.body;
@@ -182,7 +191,8 @@ const validationRate = (req, res, next) => {
 app.post('/talker', validationToken, validationName, validationAge,
   validationTalk, validationRate, validationWatchedAt, async (req, res) => {
     const newTalker = { id: 5, ...req.body };
-    await fs.writeFile(pathData, JSON.stringify([newTalker]));
+    const talkers = await personTalkers();
+    await fs.writeFile(pathData, JSON.stringify([...talkers, newTalker]));
     res.status(HTTP_CREATED_STATUS).json(await newTalker);
 });
 
