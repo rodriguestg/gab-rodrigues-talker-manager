@@ -73,7 +73,6 @@ app.get('/talker/search', validationToken, async (req, res) => {
   const talkers = await personTalkers();
   const talkersFilter = talkers.filter((person) => person.name.includes(searchTerm));
   const talkerEdit = [...talkersFilter];
-  await fs.writeFile(pathData, JSON.stringify(talkerEdit));
   res.status(HTTP_OK_STATUS).json(talkerEdit);
 });
 
