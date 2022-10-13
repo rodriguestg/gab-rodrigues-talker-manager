@@ -13,6 +13,7 @@ const HTTP_CREATED_STATUS = 201;
 const HTTP_BAD_STATUS = 404;
 const HTTP_BAD400_STATUS = 400;
 const HTTP_BAD401_STATUS = 401;
+const HTTP_DELETE_STATUS = 204;
 const PORT = '3000';
 
 // não remova esse endpoint, e para o avaliador funcionar
@@ -193,4 +194,13 @@ app.put('/talker/:id', validationToken, validationName, validationAge,
     const talkerEdit = { ...talkersFilter, id: Number(id), ...req.body };
     await fs.writeFile(pathData, JSON.stringify([talkerEdit]));
     res.status(HTTP_OK_STATUS).json(talkerEdit);
+});
+
+app.delete('/talker/:id', validationToken, async (req, res) => {
+    const { id } = req.params;
+    const talkers = await personTalkers();
+    const talkersFilter = talkers.filter((person) => person.id !== Number(id));
+    const talkerEdit = { ...talkersFilter };
+    await fs.writeFile(pathData, JSON.stringify([talkerEdit]));
+    res.status(HTTP_DELETE_STATUS).end();
 });
